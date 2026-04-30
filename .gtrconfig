@@ -1,0 +1,8 @@
+[gtr]
+  ai = claude
+
+[gtr.copy]
+  include = .env,.env.production
+
+[gtr.hook]
+  postCreate = cd app && pnpm install

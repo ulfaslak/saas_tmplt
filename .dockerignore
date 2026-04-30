@@ -1,0 +1,14 @@
+node_modules
+.git
+.env
+.env.production
+.env.local
+*.md
+AGENTS
+.github
+.claude
+.vscode
+.cursor
+terraform
+.playwright-mcp
+screenshots

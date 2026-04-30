@@ -1,0 +1,33 @@
+#cloud-config
+
+users:
+  - name: deploy
+    groups: docker
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${deploy_public_key}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - jq
+  - unattended-upgrades
+
+runcmd:
+  # Install Docker
+  - curl -fsSL https://get.docker.com | sh
+
+  # Note: cloud-init can't clone a private repo without a deploy key. Generate
+  # one on the VPS post-provision and add it to the GitHub repo manually:
+  #
+  #   ssh deploy@<ip> 'ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -N ""'
+  #   ssh deploy@<ip> 'cat ~/.ssh/github_deploy.pub'   # add as deploy key
+  #   ssh deploy@<ip> 'GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy" git clone git@github.com:<OWNER>/<REPO>.git ~/<APP_DIR>'
+  #
+  # Then create the backups dir:
+  - su - deploy -c "mkdir -p ~/backups"

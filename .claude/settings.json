@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prettier-check.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/kill-stage-server.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": []
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "slack@claude-plugins-official": true,
+    "linear@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  }
+}

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd agent for daily offsite backup sync. Replace <APP_NAME> and the
+  absolute path to the repo before installing:
+
+      cp scripts/backup-sync.plist ~/Library/LaunchAgents/com.<APP_NAME>.backup-sync.plist
+      launchctl load ~/Library/LaunchAgents/com.<APP_NAME>.backup-sync.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.APP_NAME.backup-sync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/ABSOLUTE/PATH/TO/REPO/scripts/sync-backups.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>VPS_HOST</key>
+        <string>YOUR_DOMAIN_OR_IP</string>
+        <key>VPS_USER</key>
+        <string>deploy</string>
+        <key>SSH_KEY</key>
+        <string>/Users/YOU/.ssh/your_deploy_key</string>
+        <key>APP_NAME</key>
+        <string>APP_NAME</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/APP_NAME-backup-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/APP_NAME-backup-sync.log</string>
+</dict>
+</plist>

@@ -1,0 +1,73 @@
+# Production stack. Replace ghcr.io/<OWNER>/<REPO>:latest with your image.
+# `.env.production` must define POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
+# DATABASE_URL, and any provider env vars you've enabled.
+
+services:
+  app:
+    image: ghcr.io/<OWNER>/<REPO>:latest
+    env_file: .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+    volumes:
+      - ./logs:/app/logs
+
+  postgres:
+    image: postgres:18-alpine
+    env_file: .env.production
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:1.29.5
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/502.html:/etc/nginx/html/502.html:ro
+      - acme_data:/etc/nginx/acme
+    depends_on:
+      - app
+    restart: always
+
+  backup:
+    image: postgres:18-alpine
+    env_file: .env.production
+    environment:
+      PGHOST: postgres
+    volumes:
+      - ./backups:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c 'export PGPASSWORD="$$POSTGRES_PASSWORD"; while true; do
+        pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc > /backups/dump_$$(date +%Y%m%d_%H%M%S).dump
+        find /backups -name "*.dump" -mtime +30 -delete
+        sleep 86400
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  pgdata:
+  acme_data:

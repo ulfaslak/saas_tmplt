@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log Viewer</title>
+<style>
+	*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+	:root {
+		--bg: #0f1117;
+		--surface: #1a1d27;
+		--surface-hover: #22263a;
+		--border: #2a2e3e;
+		--text: #e1e4ed;
+		--text-muted: #8b90a0;
+		--accent: #6c8cff;
+		--accent-dim: #3d5199;
+		--red: #ff6b6b;
+		--orange: #ffb347;
+		--green: #69db7c;
+		--font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+		--mono: 'SF Mono', 'Fira Code', monospace;
+	}
+
+	body {
+		font-family: var(--font);
+		background: var(--bg);
+		color: var(--text);
+		line-height: 1.5;
+		min-height: 100vh;
+	}
+
+	/* --- Drop zone --- */
+	#drop-zone {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-height: 100vh;
+		gap: 16px;
+		transition: background 0.2s;
+	}
+	#drop-zone.active { background: rgba(108, 140, 255, 0.06); }
+	#drop-zone h1 { font-size: 24px; font-weight: 600; }
+	#drop-zone p { color: var(--text-muted); font-size: 14px; }
+	#drop-zone .icon { font-size: 48px; opacity: 0.5; }
+	#drop-zone label {
+		padding: 8px 20px;
+		background: var(--accent);
+		color: #fff;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 14px;
+		font-weight: 500;
+	}
+	#drop-zone label:hover { background: #5a7ae6; }
+	#file-input { display: none; }
+
+	/* --- Dashboard --- */
+	#dashboard { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+	#dashboard.visible { display: block; }
+
+	.header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 24px;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.header h1 { font-size: 20px; font-weight: 600; }
+	.header .meta { color: var(--text-muted); font-size: 13px; }
+
+	.filters {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-bottom: 24px;
+	}
+	.filters select, .filters input[type="date"], .filters input[type="text"] {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		color: var(--text);
+		padding: 6px 10px;
+		border-radius: 6px;
+		font-size: 13px;
+		font-family: var(--font);
+	}
+	.filters input[type="date"] { width: 140px; }
+	.filters input[type="text"] { width: 160px; }
+	.filters input[type="text"]::placeholder { color: var(--text-muted); }
+	.filters button {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		color: var(--text);
+		padding: 6px 14px;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 13px;
+		font-family: var(--font);
+	}
+	.filters button:hover { background: var(--surface-hover); }
+
+	.filter-toggle {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-left: 8px;
+		cursor: pointer;
+		user-select: none;
+	}
+	.filter-toggle input[type="checkbox"] {
+		accent-color: var(--accent);
+		cursor: pointer;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+
+	.card {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 20px;
+	}
+	.card h3 {
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin-bottom: 12px;
+	}
+	.card .big-number {
+		font-size: 32px;
+		font-weight: 700;
+		line-height: 1;
+	}
+	.card .sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+	.card-wide { grid-column: 1 / -1; }
+
+	/* --- Charts --- */
+	canvas { width: 100% !important; height: 200px !important; }
+
+	/* --- Tables --- */
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+	}
+	th {
+		text-align: left;
+		font-weight: 500;
+		color: var(--text-muted);
+		padding: 8px 12px;
+		border-bottom: 1px solid var(--border);
+	}
+	td {
+		padding: 8px 12px;
+		border-bottom: 1px solid var(--border);
+	}
+	tr:hover td { background: var(--surface-hover); }
+	.mono { font-family: var(--mono); font-size: 12px; }
+	.badge {
+		display: inline-block;
+		padding: 2px 8px;
+		border-radius: 4px;
+		font-size: 11px;
+		font-weight: 600;
+	}
+	.badge-error { background: rgba(255, 107, 107, 0.15); color: var(--red); }
+	.badge-warn { background: rgba(255, 179, 71, 0.15); color: var(--orange); }
+	.badge-info { background: rgba(108, 140, 255, 0.1); color: var(--accent); }
+
+	.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+	.bar-label { width: 220px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+	.bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+	.bar-count { font-size: 12px; color: var(--text-muted); width: 50px; text-align: right; }
+
+	.reset-btn {
+		background: none;
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		padding: 6px 12px;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 12px;
+	}
+	.reset-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+	/* Log lines table */
+	#log-lines { max-height: 500px; overflow-y: auto; }
+	#log-lines table { font-family: var(--mono); font-size: 12px; }
+	#log-lines td { white-space: nowrap; max-width: 600px; overflow: hidden; text-overflow: ellipsis; }
+	.level-50, .level-60 { color: var(--red); }
+	.level-40 { color: var(--orange); }
+	.level-30 { color: var(--text); }
+	.level-20 { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div id="drop-zone">
+	<div class="icon">&#128202;</div>
+	<h1>Log Viewer</h1>
+	<p>Drop a pino JSON log file here, or click to browse</p>
+	<label for="file-input">Choose file</label>
+	<input type="file" id="file-input" accept=".jsonl,.json,.log,.txt">
+</div>
+
+<div id="dashboard">
+	<div class="header">
+		<div>
+			<h1>Log Analytics</h1>
+			<div class="meta" id="file-meta"></div>
+		</div>
+		<button class="reset-btn" onclick="resetView()">Load another file</button>
+	</div>
+
+	<div class="filters">
+		<input type="date" id="filter-start" title="Start date">
+		<input type="date" id="filter-end" title="End date">
+		<select id="filter-level">
+			<option value="">All levels</option>
+			<option value="20">Debug+</option>
+			<option value="30">Info+</option>
+			<option value="40">Warn+</option>
+			<option value="50">Error+</option>
+			<option value="60">Fatal</option>
+		</select>
+		<select id="filter-org"><option value="">All orgs</option></select>
+		<input type="text" id="filter-path" placeholder="Include path/msg...">
+		<input type="text" id="filter-exclude" placeholder="Exclude: login, landing, ...">
+		<button onclick="applyFilters()">Apply</button>
+		<button onclick="clearFilters()">Clear</button>
+		<label class="filter-toggle">
+			<input type="checkbox" id="toggle-health" onchange="toggleHealth()">
+			Include health checks
+		</label>
+	</div>
+
+	<div class="grid" id="summary-cards">
+		<div class="card">
+			<h3>Requests</h3>
+			<div class="big-number" id="stat-total">-</div>
+			<div class="sub" id="stat-period"></div>
+		</div>
+		<div class="card">
+			<h3>Errors</h3>
+			<div class="big-number" style="color: var(--red)" id="stat-errors">-</div>
+			<div class="sub" id="stat-error-detail"></div>
+		</div>
+		<div class="card">
+			<h3>Median Response</h3>
+			<div class="big-number" id="stat-p50">-</div>
+			<div class="sub">p50 latency</div>
+		</div>
+		<div class="card">
+			<h3>App Events</h3>
+			<div class="big-number" id="stat-events">-</div>
+			<div class="sub" id="stat-events-detail">non-request log entries</div>
+		</div>
+	</div>
+
+	<div class="grid">
+		<div class="card">
+			<h3>Requests / Day</h3>
+			<canvas id="chart-requests"></canvas>
+		</div>
+		<div class="card">
+			<h3>Errors & Warnings / Day</h3>
+			<canvas id="chart-errors"></canvas>
+		</div>
+	</div>
+
+	<div class="grid">
+		<div class="card">
+			<h3>Top Endpoints</h3>
+			<div id="top-endpoints"></div>
+		</div>
+		<div class="card">
+			<h3>Event Types</h3>
+			<div id="event-types"></div>
+		</div>
+	</div>
+
+	<div class="grid">
+		<div class="card">
+			<h3>Error Breakdown</h3>
+			<div id="error-breakdown"></div>
+		</div>
+		<div class="card">
+			<h3>Response Time</h3>
+			<div id="response-stats"></div>
+			<div id="slow-requests" style="margin-top: 12px"></div>
+		</div>
+	</div>
+
+	<div class="grid">
+		<div class="card card-wide">
+			<h3>Recent Log Lines</h3>
+			<div id="log-lines"></div>
+		</div>
+	</div>
+</div>
+
+<script>
+// Minimal canvas chart library (no dependencies)
+const Chart = {
+	bar(canvas, labels, values, color = 'rgba(108, 140, 255, 0.7)') {
+		const ctx = canvas.getContext('2d');
+		const dpr = window.devicePixelRatio || 1;
+		const rect = canvas.getBoundingClientRect();
+		canvas.width = rect.width * dpr;
+		canvas.height = rect.height * dpr;
+		ctx.scale(dpr, dpr);
+		const w = rect.width, h = rect.height;
+		const pad = { top: 10, right: 10, bottom: 30, left: 50 };
+		const cw = w - pad.left - pad.right;
+		const ch = h - pad.top - pad.bottom;
+		const max = Math.max(...values, 1);
+
+		ctx.clearRect(0, 0, w, h);
+		ctx.font = '10px sans-serif';
+		ctx.fillStyle = '#8b90a0';
+
+		// Y axis
+		for (let i = 0; i <= 4; i++) {
+			const y = pad.top + ch - (ch * i / 4);
+			const val = Math.round(max * i / 4);
+			ctx.textAlign = 'right';
+			ctx.fillText(val, pad.left - 6, y + 3);
+			ctx.strokeStyle = '#2a2e3e';
+			ctx.beginPath();
+			ctx.moveTo(pad.left, y);
+			ctx.lineTo(w - pad.right, y);
+			ctx.stroke();
+		}
+
+		// Bars
+		const barW = Math.max(2, (cw / labels.length) - 2);
+		values.forEach((v, i) => {
+			const x = pad.left + (cw / labels.length) * i + 1;
+			const barH = (v / max) * ch;
+			ctx.fillStyle = color;
+			ctx.fillRect(x, pad.top + ch - barH, barW, barH);
+		});
+
+		// X labels (show subset to avoid crowding)
+		const step = Math.max(1, Math.floor(labels.length / 8));
+		labels.forEach((l, i) => {
+			if (i % step !== 0) return;
+			const x = pad.left + (cw / labels.length) * i + barW / 2;
+			ctx.fillStyle = '#8b90a0';
+			ctx.textAlign = 'center';
+			ctx.fillText(l, x, h - 8);
+		});
+	}
+};
+
+let allEntries = [];
+let filtered = [];
+let includeHealth = false;
+
+// --- Embedded data (injected by fetch-logs.sh) ---
+// EMBEDDED_DATA_START
+const EMBEDDED_LOG_DATA = null;
+const EMBEDDED_ORG_NAMES = {};
+// EMBEDDED_DATA_END
+
+const orgNames = EMBEDDED_ORG_NAMES || {};
+function orgLabel(id) { return orgNames[id] || id.substring(0, 8) + '...'; }
+
+// --- File loading ---
+const dropZone = document.getElementById('drop-zone');
+const dashboard = document.getElementById('dashboard');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+dropZone.addEventListener('drop', e => {
+	e.preventDefault();
+	dropZone.classList.remove('active');
+	if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) loadFile(e.target.files[0]); });
+
+// Auto-load embedded data if present
+if (EMBEDDED_LOG_DATA) {
+	loadData(EMBEDDED_LOG_DATA, 'production logs');
+}
+
+function loadData(text, label) {
+	const lines = text.split('\n').filter(l => l.trim());
+	allEntries = [];
+	for (const line of lines) {
+		try {
+			const entry = JSON.parse(line);
+			if (entry.time) entry._ts = new Date(entry.time);
+			else if (entry.timestamp) entry._ts = new Date(entry.timestamp);
+			else continue;
+			entry._isRequest = entry.msg === 'request';
+			entry._isHealth = entry.path === '/api/health';
+			allEntries.push(entry);
+		} catch { /* skip non-JSON lines */ }
+	}
+	allEntries.sort((a, b) => a._ts - b._ts);
+
+	const nonHealth = allEntries.filter(e => !e._isHealth);
+	const healthCount = allEntries.length - nonHealth.length;
+	const range = allEntries.length > 0
+		? ` \u2014 ${fmtDate(allEntries[0]._ts)} to ${fmtDate(allEntries[allEntries.length - 1]._ts)}`
+		: '';
+	document.getElementById('file-meta').textContent =
+		`${label} \u2014 ${nonHealth.length.toLocaleString()} entries` +
+		(healthCount > 0 ? ` (${healthCount.toLocaleString()} health checks excluded)` : '') +
+		range;
+
+	initFilters();
+	applyFilters();
+
+	dropZone.style.display = 'none';
+	dashboard.classList.add('visible');
+}
+
+function loadFile(file) {
+	const reader = new FileReader();
+	reader.onload = () => loadData(reader.result, file.name);
+	reader.readAsText(file);
+}
+
+function resetView() {
+	dropZone.style.display = '';
+	dashboard.classList.remove('visible');
+	allEntries = [];
+	filtered = [];
+	fileInput.value = '';
+}
+
+// --- Filters ---
+function initFilters() {
+	if (allEntries.length > 0) {
+		document.getElementById('filter-start').value = dateStr(allEntries[0]._ts);
+		document.getElementById('filter-end').value = dateStr(allEntries[allEntries.length - 1]._ts);
+	}
+	const orgs = [...new Set(allEntries.filter(e => e.orgId).map(e => e.orgId))].sort();
+	const sel = document.getElementById('filter-org');
+	sel.innerHTML = '<option value="">All orgs</option>' +
+		orgs.map(id => `<option value="${id}">${esc(orgLabel(id))}</option>`).join('');
+}
+
+function applyFilters() {
+	const start = document.getElementById('filter-start').value;
+	const end = document.getElementById('filter-end').value;
+	const level = document.getElementById('filter-level').value;
+	const org = document.getElementById('filter-org').value;
+	const search = document.getElementById('filter-path').value.toLowerCase();
+	const excludeTerms = document.getElementById('filter-exclude').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+
+	filtered = allEntries.filter(e => {
+		if (!includeHealth && e._isHealth) return false;
+		if (start && dateStr(e._ts) < start) return false;
+		if (end && dateStr(e._ts) > end) return false;
+		if (level && e.level < Number(level)) return false;
+		if (org && e.orgId !== org) return false;
+		const haystack = ((e.path || '') + ' ' + (e.msg || '') + ' ' + (e.method || '')).toLowerCase();
+		if (search && !haystack.includes(search)) return false;
+		if (excludeTerms.length > 0 && excludeTerms.some(term => haystack.includes(term))) return false;
+		return true;
+	});
+	render();
+}
+
+function clearFilters() {
+	document.getElementById('filter-level').value = '';
+	document.getElementById('filter-org').value = '';
+	document.getElementById('filter-path').value = '';
+	document.getElementById('filter-exclude').value = '';
+	initFilters();
+	applyFilters();
+}
+
+function toggleHealth() {
+	includeHealth = document.getElementById('toggle-health').checked;
+	applyFilters();
+}
+
+// --- Rendering ---
+function render() {
+	const requests = filtered.filter(e => e._isRequest);
+	const events = filtered.filter(e => !e._isRequest);
+	const httpErrors = requests.filter(e => e.status >= 400);
+	const appErrors = filtered.filter(e => e.level >= 50);
+	const issues = filtered.filter(e => e.level >= 40 || (e._isRequest && e.status >= 400));
+
+	// --- Summary cards ---
+	document.getElementById('stat-total').textContent = requests.length.toLocaleString();
+	const dayKeys = Object.keys(groupByDay(filtered)).sort();
+	document.getElementById('stat-period').textContent =
+		dayKeys.length > 0 ? `over ${dayKeys.length} day(s)` : '';
+
+	const totalErrors = httpErrors.length + appErrors.length;
+	document.getElementById('stat-errors').textContent = totalErrors.toLocaleString();
+	document.getElementById('stat-error-detail').textContent =
+		`${httpErrors.length} HTTP 4xx/5xx \u00b7 ${appErrors.length} app errors`;
+
+	const durations = requests.map(e => e.duration).filter(d => typeof d === 'number').sort((a, b) => a - b);
+	document.getElementById('stat-p50').textContent =
+		durations.length > 0 ? percentile(durations, 50) + 'ms' : '-';
+
+	document.getElementById('stat-events').textContent = events.length.toLocaleString();
+	const uniqueOrgs = new Set(events.filter(e => e.orgId).map(e => e.orgId));
+	document.getElementById('stat-events-detail').textContent =
+		uniqueOrgs.size > 0 ? `from ${uniqueOrgs.size} org(s)` : 'non-request log entries';
+
+	// --- Charts ---
+	const reqByDay = groupByDay(requests);
+	const issuesByDay = groupByDay(issues);
+	const allDays = [...new Set([...Object.keys(reqByDay), ...Object.keys(issuesByDay)])].sort();
+
+	Chart.bar(
+		document.getElementById('chart-requests'),
+		allDays.map(d => d.slice(5)),
+		allDays.map(d => (reqByDay[d] || []).length)
+	);
+	Chart.bar(
+		document.getElementById('chart-errors'),
+		allDays.map(d => d.slice(5)),
+		allDays.map(d => (issuesByDay[d] || []).length),
+		'rgba(255, 107, 107, 0.7)'
+	);
+
+	// --- Top endpoints ---
+	const endpointCounts = countBy(requests, e => `${e.method} ${e.path || 'unknown'}`);
+	renderBars('top-endpoints', topN(endpointCounts, 10));
+
+	// --- Event types ---
+	const eventCounts = countBy(events, e => e.msg || 'unknown');
+	renderBars('event-types', topN(eventCounts, 10));
+
+	// --- Error breakdown ---
+	const errorLabels = [
+		...httpErrors.map(e => `${e.status} ${e.method} ${e.path || '-'}`),
+		...appErrors.map(e => e.msg || 'unknown'),
+	];
+	const errorCounts = countBy(errorLabels, l => l);
+	renderBars('error-breakdown', topN(errorCounts, 10));
+
+	// --- Response time ---
+	const statsEl = document.getElementById('response-stats');
+	if (durations.length > 0) {
+		statsEl.innerHTML = [50, 95, 99].map(p =>
+			`<div class="sub">p${p}: ${percentile(durations, p)}ms</div>`
+		).join('');
+
+		const slow = requests.filter(e => e.duration > 1000).sort((a, b) => b.duration - a.duration).slice(0, 5);
+		document.getElementById('slow-requests').innerHTML = slow.length > 0
+			? '<strong style="font-size:12px;color:var(--text-muted)">Slowest requests:</strong>' +
+			  '<table><tr><th>Path</th><th>Duration</th><th>Status</th><th>Time</th></tr>' +
+			  slow.map(e => `<tr>
+			  	<td class="mono">${esc(e.method || '?')} ${esc(e.path || '-')}</td>
+			  	<td>${e.duration}ms</td>
+			  	<td>${e.status || '-'}</td>
+			  	<td class="mono">${fmtTime(e._ts)}</td>
+			  </tr>`).join('') + '</table>'
+			: '<div style="color:var(--text-muted);font-size:12px">No requests over 1s</div>';
+	} else {
+		statsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">No request data</div>';
+		document.getElementById('slow-requests').innerHTML = '';
+	}
+
+	// --- Recent log lines ---
+	const recent = filtered.slice(-200).reverse();
+	document.getElementById('log-lines').innerHTML =
+		'<table><tr><th style="width:80px">Time</th><th style="width:60px">Level</th><th>Detail</th></tr>' +
+		recent.map(e => {
+			let detail;
+			if (e._isRequest) {
+				const statusColor = e.status >= 500 ? 'var(--red)' : e.status >= 400 ? 'var(--orange)' : 'var(--green)';
+				detail = `${esc(e.method || '?')} ${esc(e.path || '-')} ` +
+					`<span style="color:${statusColor}">${e.status || '-'}</span>` +
+					(e.duration != null ? ` <span style="color:var(--text-muted)">${e.duration}ms</span>` : '');
+			} else {
+				const ids = [
+					e.orgId && orgLabel(e.orgId),
+					e.caseId && `case:${e.caseId.substring(0, 8)}`,
+					e.jobId && `job:${e.jobId.substring(0, 8)}`,
+				].filter(Boolean).join(' ');
+				detail = esc(e.msg || '-') +
+					(ids ? ` <span style="color:var(--text-muted)">${esc(ids)}</span>` : '');
+			}
+			return `<tr class="level-${e.level}">
+				<td class="mono">${fmtTime(e._ts)}</td>
+				<td><span class="badge ${levelBadge(e.level)}">${levelName(e.level)}</span></td>
+				<td>${detail}</td>
+			</tr>`;
+		}).join('') + '</table>';
+}
+
+// --- Helpers ---
+function groupByDay(entries) {
+	const groups = {};
+	for (const e of entries) {
+		const d = dateStr(e._ts);
+		(groups[d] = groups[d] || []).push(e);
+	}
+	return groups;
+}
+
+function countBy(arr, fn) {
+	const counts = {};
+	for (const item of arr) {
+		const key = fn(item);
+		counts[key] = (counts[key] || 0) + 1;
+	}
+	return counts;
+}
+
+function topN(counts, n) {
+	return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+function percentile(sorted, p) {
+	const idx = Math.ceil((p / 100) * sorted.length) - 1;
+	return sorted[Math.max(0, idx)];
+}
+
+function renderBars(containerId, entries) {
+	const el = document.getElementById(containerId);
+	if (entries.length === 0) {
+		el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">No data</div>';
+		return;
+	}
+	const max = entries[0][1];
+	el.innerHTML = entries.map(([label, count]) => `
+		<div class="bar-row">
+			<div class="bar-label" title="${esc(label)}">${esc(label)}</div>
+			<div class="bar-track"><div class="bar-fill" style="width:${(count / max * 100)}%"></div></div>
+			<div class="bar-count">${count.toLocaleString()}</div>
+		</div>
+	`).join('');
+}
+
+function dateStr(d) { return d.toISOString().slice(0, 10); }
+function fmtDate(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function fmtTime(d) { return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+
+function levelName(l) {
+	if (l >= 60) return 'FATAL';
+	if (l >= 50) return 'ERROR';
+	if (l >= 40) return 'WARN';
+	if (l >= 30) return 'INFO';
+	return 'DEBUG';
+}
+
+function levelBadge(l) {
+	if (l >= 50) return 'badge-error';
+	if (l >= 40) return 'badge-warn';
+	return 'badge-info';
+}
+
+function esc(s) {
+	const d = document.createElement('div');
+	d.textContent = s;
+	return d.innerHTML;
+}
+</script>
+</body>
+</html>
