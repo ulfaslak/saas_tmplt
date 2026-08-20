@@ -14,13 +14,9 @@
 
 The project's issue tracker is the single source of truth for in-flight and planned work.
 
-> ⚠️ **Template placeholder.** Pick one and delete the others:
+> ⚠️ **Template placeholder.** The workflow defaults to **GitHub Issues** — repo `<owner/repo>`, queried via `gh issue list`, with the state model (open/closed + claim comment + linked PR) documented in CLAUDE.md §Issues. Fill in the repo path and delete this admonition.
 >
-> - **Linear** — workspace `<your-workspace>`, team `<Team Name>`, project `<Project Name>`. Query via the Linear MCP (`list_issues`).
-> - **GitHub Issues** — repo `<owner/repo>`. Query via `gh issue list`.
-> - **Jira** — site `<your-site.atlassian.net>`, project key `<KEY>`. Query via the Atlassian MCP.
->
-> Document any conventions: ticket prefix (e.g. "FOO-123"), where issues are created, who triages, what "Ready to ship" vs "In Review" means.
+> If you use Linear or Jira instead, document workspace/site, team/project, and ticket prefix here, and adapt CLAUDE.md §Issues to that tracker's states.
 
 ## 4. User Personas & Permissions
 

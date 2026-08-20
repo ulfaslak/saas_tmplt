@@ -5,7 +5,7 @@ This repo is a **starting point**, not a finished app. It bundles:
 - A SvelteKit + TypeScript + Tailwind v4 + shadcn-svelte skeleton with Auth.js (4 providers), Drizzle, Postgres, pg-boss, pino, Resend.
 - A multi-tenancy baseline: `organizations`, `memberships`, `invites`, `api_keys`, `impersonation_sessions`. Working sign-up, invite-flow, team-settings, API-key management, and a basic dashboard shell.
 - Production deployment scaffolding: Dockerfile, `docker-compose.prod.yml`, nginx with native ACME, Hetzner Terraform, GitHub Actions CI/CD with zero-downtime canary deploy, daily pg_dump + offsite rsync.
-- **The agent workflow.** `CLAUDE.md`, `AGENTS/DNA/`, `.claude/commands/` (the `/issue`, `/cleanse`, `/sweep`, `/stage`, `/ship`, `/redeploy`, `/reset`, `/impersonate`, `/review`, `/userstats` skills) — the whole rig that lets you hand a feature to an agent and have it run worktree → PR → self-test → fix-learn → merge → verify on its own.
+- **The agent workflow.** `CLAUDE.md`, `AGENTS/` (DNA guardrails, invariants, environment notes, scheduled-jobs registry, mistake/deferred/verification ledgers, the design-mock workflow), the `/cleanse` command, and the `adversarial-reviewer` subagent — the whole rig that lets you hand a feature to an agent and have it run worktree → PR → self-test → adversarial review → fix-learn → merge → verify on its own. Project-specific skills (`/stage`, `/ship`, `/redeploy`, …) are deliberately **not** bundled — you author them for your project as its infra takes shape (see Step 7).
 
 ## Bootstrapping a new project from this template
 
@@ -21,14 +21,14 @@ Run a project-wide search for each of the following tokens and replace with your
 
 | Placeholder | Where it appears | Replace with |
 |---|---|---|
-| `<APP_NAME>` | terraform vars, scripts, docker, .claude/commands, CLAUDE.md | Lowercase project name (e.g. `acme`). Used for resource names. |
-| `<DOMAIN>` | nginx/nginx.conf, .claude/commands, CLAUDE.md | Production domain (e.g. `app.acme.com`) |
-| `<HOST_IP>` | CLAUDE.md, .claude/commands | VPS IP from Terraform output (fill in once provisioned) |
-| `<DEPLOY_USER>` | CLAUDE.md, .claude/commands, scripts | Usually `deploy` |
-| `<SSH_KEY_PATH>` | CLAUDE.md, .claude/commands, scripts | Local path to the SSH key used for VPS access (e.g. `~/.ssh/<APP_NAME>_deploy`) |
-| `<APP_DIR>` | CLAUDE.md, .claude/commands, scripts | Path on the VPS where the repo lives, usually `~/<APP_NAME>` |
-| `<DB_USER>` / `<DB_NAME>` | CLAUDE.md, .claude/commands | Postgres user/db (set in `.env.production`) |
-| `<GITHUB_OWNER>/<REPO>` | docker-compose.prod.yml, .claude/commands/redeploy.md | GitHub repo path, used for GHCR image |
+| `<APP_NAME>` | terraform vars, scripts, docker, CLAUDE.md, AGENTS/SCHEDULED_JOBS.md | Lowercase project name (e.g. `acme`). Used for resource names. |
+| `<DOMAIN>` | nginx/nginx.conf, CLAUDE.md | Production domain (e.g. `app.acme.com`) |
+| `<HOST_IP>` | CLAUDE.md | VPS IP from Terraform output (fill in once provisioned) |
+| `<DEPLOY_USER>` | CLAUDE.md, scripts | Usually `deploy` |
+| `<SSH_KEY_PATH>` | CLAUDE.md, scripts | Local path to the SSH key used for VPS access (e.g. `~/.ssh/<APP_NAME>_deploy`) |
+| `<APP_DIR>` | CLAUDE.md, scripts | Path on the VPS where the repo lives, usually `~/<APP_NAME>` |
+| `<DB_USER>` / `<DB_NAME>` | CLAUDE.md | Postgres user/db (set in `.env.production`) |
+| `<GITHUB_OWNER>/<REPO>` | docker-compose.prod.yml | GitHub repo path, used for GHCR image |
 | `<ACME_EMAIL>` | nginx/nginx.conf | Email Let's Encrypt should contact about cert issues |
 
 There are also `> ⚠️ **Template placeholder.**` admonitions in:
@@ -40,15 +40,17 @@ There are also `> ⚠️ **Template placeholder.**` admonitions in:
 - `AGENTS/DNA/DEVELOPMENT.md` — backup path
 - `AGENTS/DNA/DEVELOPMENT_SETUP.md` — provider-setup details
 - `AGENTS/DNA/ARCHITECTURE.md`, `AGENTS/DNA/DECISIONS.md` — sections that describe stack choices the template baked in (review and confirm or change)
-- `.claude/commands/{issue,ship,stage,redeploy,impersonate}.md` — placeholder ssh/db details
+- `AGENTS/DNA/INVARIANTS.md` — starts empty by design; the admonition explains how entries are earned
+- `AGENTS/ENVIRONMENT_NOTES.md`, `AGENTS/SCHEDULED_JOBS.md` — verify the seeded entries against your setup
+- `AGENTS/SPECS/README.md` — the mock workflow needs a `_TEMPLATE/` seeded from your app's real chrome (defer until the design system settles)
 
 Read each, fill in the project-specific values, then delete the admonition.
 
-### Step 2 — Wire the issue tracker
+### Step 2 — Confirm the issue tracker
 
-In `AGENTS/DNA/PRODUCT.md` §3, pick Linear / GitHub Issues / Jira and document the workspace, team/project, and ticket prefix. Update `.claude/commands/issue.md` and `ship.md` if you're using something other than Linear MCP — the *workflow* shape is the same; only the tool calls change.
+The workflow defaults to **GitHub Issues** on this repo — no wiring needed: `gh` is the interface, and CLAUDE.md §Issues documents the state model (open/closed + claim comment + linked PR). Confirm `gh auth status` works and note the repo path in `AGENTS/DNA/PRODUCT.md` §3.
 
-If you're using Linear: install the Linear plugin (`enabledPlugins` in `.claude/settings.json` already lists it), authenticate, and confirm `mcp__linear__list_issues` returns results.
+If you prefer Linear or Jira instead: adapt CLAUDE.md §Issues to your tracker's states, enable the relevant plugin in `.claude/settings.json` (`enabledPlugins`), and authenticate its MCP.
 
 ### Step 3 — Stack confirmation
 
@@ -94,7 +96,16 @@ If any of the above fail, **stop and fix before continuing** — these are the f
 
 After the first successful deploy, fill in `<HOST_IP>` everywhere it still appears.
 
-### Step 7 — Delete this file
+### Step 7 — Author your project's skills
+
+The template ships only `/cleanse` (project-agnostic DNA hygiene). The rest of the workflow's skills are project-specific by nature, so you write them for *your* infra as it comes into being, as `.claude/commands/<name>.md`:
+
+- **`/stage`** — the one CLAUDE.md Phase 2 assumes: spin up a local dev server against a production DB snapshot (restore latest dump from `backups/`, run migrations, start `pnpm dev`, sign in via a dev-login path). Write it as soon as prod has data worth snapshotting.
+- **`/ship`** — merge + post-merge routine, if your Phase 5 grows project-specific steps.
+- **`/redeploy`** — disaster recovery: provision a fresh VPS from Terraform and restore from backup. Write it *before* you need it.
+- Anything else that becomes a repeatable workflow (impersonation, usage stats, sweeps). Skills are for specialized repeatable workflows — baseline behaviour every session needs belongs in CLAUDE.md.
+
+### Step 8 — Delete this file
 
 Once placeholders are gone and you've shipped a first deploy, `git rm TEMPLATE.md` and remove the line referencing it at the top of `CLAUDE.md`. The agent workflow takes over from here.
 
@@ -104,12 +115,12 @@ Once placeholders are gone and you've shipped a first deploy, `git rm TEMPLATE.m
 
 After bootstrap, the daily loop is:
 
-1. You describe a feature or fix to the agent in chat.
-2. The agent runs `/issue`: brainstorms, creates an issue in your tracker (status In Progress with a short Goal), iterates on a full spec with you, then updates the issue.
-3. The agent dispatches a subagent in a worktree to implement, opens a PR, runs `pnpm check` + unit + integration tests.
-4. The subagent self-tests via `/stage` (Playwright, with a production DB snapshot) and pushes fix commits as it finds bugs.
-5. After you say "merge", `/ship` merges the PR, runs migrations on prod, verifies endpoints, and clears `POST_MERGE_VERIFICATION` entries whose triggers have fired.
-6. Mistakes found during self-test land in `AGENTS/AGENT_MISTAKES.md`. `/cleanse` periodically reviews the log and looks for systemic fixes.
+1. You describe a feature or fix to the agent in chat. (Create a GitHub issue only when the work needs tracking across sessions — a self-standing PR is fine for direct requests.)
+2. The agent implements in a worktree, opens a PR, runs `pnpm check` + unit + integration tests.
+3. The agent self-tests end-to-end (Playwright against a staged app with a production DB snapshot, or programmatic verification for changes with no UI surface) and pushes fix commits as it finds bugs.
+4. For server-logic diffs, a cold `adversarial-reviewer` subagent reviews the diff before you ever see the PR (Phase 2.5).
+5. After you say "merge", the agent merges the PR, watches the deploy, verifies an authenticated route, runs/verifies migrations, and clears `POST_MERGE_VERIFICATION` entries whose triggers have fired.
+6. Mistakes found during self-test land in `AGENTS/AGENT_MISTAKES.md`; rules that bugs taught land in `AGENTS/DNA/INVARIANTS.md`; environment traps land in `AGENTS/ENVIRONMENT_NOTES.md`. `/cleanse` periodically reviews it all and looks for systemic fixes.
 
 `CLAUDE.md` is the contract that wires this together. Read it once start-to-finish before your first agent run; thereafter the agent will read it itself.
 
