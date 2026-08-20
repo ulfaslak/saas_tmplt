@@ -5,7 +5,7 @@ A SaaS starter for projects built with [Claude Code](https://www.anthropic.com/c
 It's two things bundled together:
 
 1. **A working SvelteKit + Postgres + Drizzle skeleton** with auth, multi-tenancy (orgs / memberships / invites / api-keys / impersonation), a dashboard shell, and production deploy scaffolding (Docker, nginx-ACME, Hetzner Terraform, GitHub Actions canary deploy, daily backups).
-2. **An opinionated agent workflow** — `CLAUDE.md`, `AGENTS/DNA/`, and `.claude/commands/` — designed so an agent can take a feature from "describe it" to "merged, deployed, verified" with minimal hand-holding.
+2. **An opinionated agent workflow** — `CLAUDE.md`, `AGENTS/` (DNA guardrails, invariants, environment notes, scheduled-jobs registry, mistake/deferred/verification ledgers), and a cold adversarial-review subagent — designed so an agent can take a feature from "describe it" to "merged, deployed, verified" with minimal hand-holding.
 
 ## Use it
 
@@ -26,14 +26,17 @@ See [`TEMPLATE.md`](TEMPLATE.md) for the full bootstrap checklist and [`CLAUDE.m
 ## What's inside
 
 ```
-.claude/             # Slash commands: /issue, /cleanse, /sweep, /stage, /ship, /redeploy, …
+.claude/             # /cleanse command + adversarial-reviewer subagent (other skills you author per-project)
 AGENTS/              # Agent guardrails
   CLAUDE.md          # (at repo root) — the master contract
-  DNA/               # Architectural rulings: PRODUCT, ARCHITECTURE, DECISIONS, DESIGN, UI_SPEC, DEVELOPMENT, DEVELOPMENT_SETUP
+  DNA/               # Architectural rulings: PRODUCT, ARCHITECTURE, DECISIONS, INVARIANTS, DESIGN, UI_SPEC, DEVELOPMENT, DEVELOPMENT_SETUP
   HUMAN_TODO.md      # Things only the human can do (third-party signups, etc.)
   DEFERRED.md        # Tech-debt ledger with explicit triggers
   POST_MERGE_VERIFICATION.md   # Programmatic checks queued for after deploy
   AGENT_MISTAKES.md  # Self-test failure log used by /cleanse for systemic fixes
+  ENVIRONMENT_NOTES.md         # Environment traps + shared-resource facts (record-keeping, not DNA)
+  SCHEDULED_JOBS.md  # Registry of recurring jobs, each with an absence-alarm
+  SPECS/             # Design-mock workflow (mocks are the spec an agent implements from)
 app/                 # The SvelteKit app
   src/               # Auth, dashboard shell, settings, API key management
   drizzle/           # 0000_init.sql — auth + multi-tenancy

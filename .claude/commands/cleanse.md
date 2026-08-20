@@ -81,10 +81,10 @@ If no problems are found, say so.
 
 ## Issue hygiene
 
-As part of every cleanse (shallow or deep), query the issue tracker for stale issues (those in **In Review** for an extended period). For each:
+As part of every cleanse (shallow or deep), check GitHub Issues for stragglers. `Closes #N` in a PR body auto-closes its issue on merge, so most stay current on their own — this sweep catches the ones that don't (PRs that used `Refs #N`, or issues whose PR link was never added). For each open issue that carries a claim comment:
 
-1. Check whether the linked PR has been merged (via `gh pr view`).
-2. If merged, move the issue to **Done**.
+1. Check whether an associated PR has been merged (`gh issue view <N>`, or `gh pr list --state merged --search "<title/branch>"`).
+2. If merged, close the issue: `gh issue close <N>`.
 3. Check for stale worktrees (`git worktree list`). **Before removing any worktree**, verify it is not actively managed by another Claude session — check for a `.claude` process lock or ask the human. Only remove worktrees that are confirmed orphaned.
 
 This ensures the issue tracker stays current without requiring a separate housekeeping step.
