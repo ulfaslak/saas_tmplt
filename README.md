@@ -48,3 +48,7 @@ scripts/             # deploy.sh (zero-downtime canary), sync-backups.sh
 docker-compose.yml         # Local dev Postgres
 docker-compose.prod.yml    # Production stack
 ```
+
+## License
+
+[MIT](LICENSE) — copy, adapt, and build on it freely.
