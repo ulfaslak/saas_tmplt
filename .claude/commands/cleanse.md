@@ -81,7 +81,7 @@ If no problems are found, say so.
 
 ## Issue hygiene
 
-As part of every cleanse (shallow or deep), check GitHub Issues for stragglers. `Closes #N` in a PR body auto-closes its issue on merge, so most stay current on their own — this sweep catches the ones that don't (PRs that used `Refs #N`, or issues whose PR link was never added). For each open issue that carries a claim comment:
+As part of every cleanse (shallow or deep), check GitHub Issues for stragglers. `Closes #N` in a PR body auto-closes its issue on merge, so most stay current on their own — this check catches the ones that don't (PRs that used `Refs #N`, or issues whose PR link was never added). For each open issue that carries a claim comment:
 
 1. Check whether an associated PR has been merged (`gh issue view <N>`, or `gh pr list --state merged --search "<title/branch>"`).
 2. If merged, close the issue: `gh issue close <N>`.

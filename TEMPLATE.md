@@ -5,7 +5,7 @@ This repo is a **starting point**, not a finished app. It bundles:
 - A SvelteKit + TypeScript + Tailwind v4 + shadcn-svelte skeleton with Auth.js (4 providers), Drizzle, Postgres, pg-boss, pino, Resend.
 - A multi-tenancy baseline: `organizations`, `memberships`, `invites`, `api_keys`, `impersonation_sessions`. Working sign-up, invite-flow, team-settings, API-key management, and a basic dashboard shell.
 - Production deployment scaffolding: Dockerfile, `docker-compose.prod.yml`, nginx with native ACME, Hetzner Terraform, GitHub Actions CI/CD with zero-downtime canary deploy, daily pg_dump + offsite rsync.
-- **The agent workflow.** `CLAUDE.md`, `AGENTS/` (DNA guardrails, invariants, environment notes, scheduled-jobs registry, mistake/deferred/verification ledgers, the design-mock workflow), the `/cleanse` command, and the `adversarial-reviewer` subagent — the whole rig that lets you hand a feature to an agent and have it run worktree → PR → self-test → adversarial review → fix-learn → merge → verify on its own. Project-specific skills (`/stage`, `/ship`, `/redeploy`, …) are deliberately **not** bundled — you author them for your project as its infra takes shape (see Step 7).
+- **The agent workflow.** `CLAUDE.md`, `AGENTS/` (DNA guardrails, invariants, environment notes, scheduled-jobs registry, mistake/deferred/verification ledgers, the design-mock workflow), the `/cleanse` and `/screen` commands, and the `adversarial-reviewer` subagent — the whole rig that lets you hand a feature to an agent and have it run worktree → PR → self-test → adversarial review → fix-learn → merge → verify on its own. Project-specific skills (`/stage`, `/ship`, `/redeploy`, …) are deliberately **not** bundled — you author them for your project as its infra takes shape (see Step 7).
 
 ## Bootstrapping a new project from this template
 
@@ -98,12 +98,12 @@ After the first successful deploy, fill in `<HOST_IP>` everywhere it still appea
 
 ### Step 7 — Author your project's skills
 
-The template ships only `/cleanse` (project-agnostic DNA hygiene). The rest of the workflow's skills are project-specific by nature, so you write them for *your* infra as it comes into being, as `.claude/commands/<name>.md`:
+The template ships only `/cleanse` (project-agnostic DNA hygiene) and `/screen` (one failure pattern across the codebase, ranked findings as tickets). The rest of the workflow's skills are project-specific by nature, so you write them for *your* infra as it comes into being, as `.claude/commands/<name>.md`:
 
 - **`/stage`** — the one CLAUDE.md Phase 2 assumes: spin up a local dev server against a production DB snapshot (restore latest dump from `backups/`, run migrations, start `pnpm dev`, sign in via a dev-login path). Write it as soon as prod has data worth snapshotting.
 - **`/ship`** — merge + post-merge routine, if your Phase 5 grows project-specific steps.
 - **`/redeploy`** — disaster recovery: provision a fresh VPS from Terraform and restore from backup. Write it *before* you need it.
-- Anything else that becomes a repeatable workflow (impersonation, usage stats, sweeps). Skills are for specialized repeatable workflows — baseline behaviour every session needs belongs in CLAUDE.md.
+- Anything else that becomes a repeatable workflow (impersonation, usage stats, backfills). Skills are for specialized repeatable workflows — baseline behaviour every session needs belongs in CLAUDE.md.
 
 ### Step 8 — Delete this file
 
