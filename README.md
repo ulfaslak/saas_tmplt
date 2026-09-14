@@ -26,7 +26,7 @@ See [`TEMPLATE.md`](TEMPLATE.md) for the full bootstrap checklist and [`CLAUDE.m
 ## What's inside
 
 ```
-.claude/             # /cleanse command + adversarial-reviewer subagent (other skills you author per-project)
+.claude/             # /cleanse + /screen commands, adversarial-reviewer subagent (other skills you author per-project)
 AGENTS/              # Agent guardrails
   CLAUDE.md          # (at repo root) — the master contract
   DNA/               # Architectural rulings: PRODUCT, ARCHITECTURE, DECISIONS, INVARIANTS, DESIGN, UI_SPEC, DEVELOPMENT, DEVELOPMENT_SETUP
