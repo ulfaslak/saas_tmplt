@@ -1,6 +1,6 @@
 /**
- * Standard rendered-layout probe (CLAUDE.md Phase 2, "Rendered layout, not
- * just the DOM"). Run it on every touched surface at 390px AND desktop width —
+ * Standard rendered-layout probe (CLAUDE.md Phase 2, "rendered layout not
+ * just DOM"). Run it on every touched surface at 390px AND desktop width —
  * it replaces the ad-hoc checks each session used to re-derive.
  *
  * How to drive it (Playwright MCP):

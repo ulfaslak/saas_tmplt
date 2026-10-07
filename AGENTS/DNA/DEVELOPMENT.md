@@ -66,11 +66,21 @@ Required only for the providers/integrations you actually use (the app condition
 
 ## Drizzle (database schema)
 
-Generate a migration after schema changes:
+### Writing a migration
 
-```bash
-cd app && pnpm drizzle-kit generate
-```
+**Do not run `drizzle-kit generate` in a worktree.** Worktrees start with no migration history, so Drizzle produces a full schema dump numbered `0000` instead of an incremental migration. When merged to main, this collides with the real `0000` migration and Drizzle silently skips it, leaving tables uncreated.
+
+Write the migration SQL by hand instead:
+
+1. Check the highest-numbered migration file on main (e.g. `0007_api_keys.sql`).
+2. Create the next file in sequence (e.g. `0008_your_feature.sql`).
+3. Write only the `CREATE TABLE`, `ALTER TABLE`, etc. statements for your new schema changes. Use `IF NOT EXISTS` / `IF EXISTS` so the migration is idempotent - it may run against an environment where it was already applied by hand.
+4. Do not include existing tables that already have migrations on main.
+5. **Add a matching entry to `app/drizzle/meta/_journal.json`** - this step is NOT optional. Append to `entries`: bump `idx` by 1, set `"tag"` to the filename without `.sql`, `"version": "7"`, a monotonically-increasing `"when"`, and `"breakpoints": true`. After adding the entry, validate the file is valid JSON.
+
+**Why the journal entry is mandatory:** prod applies migrations with `drizzle-kit migrate`, which is journal-based and runs ONLY journaled migrations. A `.sql` file with no journal entry passes local self-testing with anything that globs `*.sql` (like `migrate:sync`), then is **silently skipped on prod** - so the first query touching the new column 500s every request.
+
+### Applying migrations
 
 Apply migrations:
 
@@ -211,21 +221,7 @@ ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP>
 
 The app lives at `<APP_DIR>` on the VPS. All `docker compose` commands should be run from there with `-f docker-compose.prod.yml`.
 
-Common operations:
-
-```bash
-# Run migrations
-docker compose -f docker-compose.prod.yml exec -T app npx drizzle-kit migrate
-
-# Create a new org (second arg is the admin email for the seed invite)
-docker compose -f docker-compose.prod.yml exec -T app npx tsx scripts/create-org.ts "Org Name" admin@example.com
-
-# View logs
-docker compose -f docker-compose.prod.yml logs -f app
-
-# Restart app (e.g. after env var changes)
-docker compose -f docker-compose.prod.yml up -d app
-```
+The day-to-day command set - migrations, logs, restarts, raw SQL, manual deploy - is in [Operating prod](#operating-prod) below.
 
 ### Creating organizations
 
@@ -270,22 +266,58 @@ Operational learnings worth remembering — follow these to avoid rediscovering 
 - **Auth.js trustHost**: `trustHost: true` must be set explicitly in the SvelteKit auth config (`src/auth.ts`). The `AUTH_TRUST_HOST` env var alone is not sufficient when running behind a reverse proxy.
 - **Unattended upgrades**: The `unattended-upgrades` package is installed via cloud-init. Ubuntu automatically applies security patches daily without manual intervention.
 
-### Logs
+## Operating prod
+
+Every recipe below is written as a **one-shot `ssh`** from your own machine rather than as a command to type after logging in, because that is the form an agent can run. For an interactive shell: `ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP>`.
+
+**Run migrations.** The deploy does not run them, so do this after any deploy that ships new `app/drizzle/*.sql` files:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f app
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml exec -T app npx drizzle-kit migrate"
 ```
 
-Logs are structured JSON in production (via pino). Use `jq` for filtering:
+**Verify a migration actually applied.** Query the schema directly. `drizzle-kit migrate` prints success and silently skips migrations when its journal is out of sync (see "Migration journal sync" above), so its own output is never evidence.
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f app | jq 'select(.level >= 40)'
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml exec -T postgres psql -U <DB_USER> -c \
+   \"SELECT column_name FROM information_schema.columns WHERE table_name = '...' AND column_name = '...';\""
 ```
 
-### Manual deploy
+**Apply raw SQL** - the fix when drizzle skipped a migration. Paste the statements from the migration file.
 
 ```bash
-cd <APP_DIR>
-docker compose -f docker-compose.prod.yml pull app
-docker compose -f docker-compose.prod.yml up -d app
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml exec -T postgres psql -U <DB_USER>" <<'SQL'
+ALTER TABLE ...;
+SQL
+```
+
+**Tail logs.** Bound the output with `--tail`; do not add `-f` to a one-shot `ssh`, because it follows forever and hangs a non-interactive caller.
+
+```bash
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml logs --tail=80 app"
+```
+
+Prod logs are structured JSON (pino), so `jq` filters them. Level 40 and above is warnings and errors:
+
+```bash
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml logs --tail=500 app" | jq 'select(.level >= 40)'
+```
+
+**Restart the app** - needed after editing `.env.production`. Use `--no-deps --force-recreate`: a plain `up -d` can decide the existing container is already up to date and leave it running with the old environment, which looks like the env change had no effect.
+
+```bash
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "docker compose -f <APP_DIR>/docker-compose.prod.yml up -d --no-deps --force-recreate app"
+```
+
+**Manual deploy** - only if CI/CD fails:
+
+```bash
+ssh -i <SSH_KEY_PATH> <DEPLOY_USER>@<HOST_IP> \
+  "cd <APP_DIR> && git pull && docker compose -f docker-compose.prod.yml pull app && docker compose -f docker-compose.prod.yml up -d app"
 ```

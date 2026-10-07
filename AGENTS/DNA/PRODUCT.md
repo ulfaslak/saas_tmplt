@@ -14,9 +14,9 @@
 
 The project's issue tracker is the single source of truth for in-flight and planned work.
 
-> ⚠️ **Template placeholder.** The workflow defaults to **GitHub Issues** — repo `<owner/repo>`, queried via `gh issue list`, with the state model (open/closed + claim comment + linked PR) documented in CLAUDE.md §Issues. Fill in the repo path and delete this admonition.
+> ⚠️ **Template placeholder.** The workflow defaults to **GitHub Issues** — repo `<owner/repo>`, queried via `gh issue list`, with the claim-comment convention documented in CLAUDE.md § "Soft context". Fill in the repo path and delete this admonition.
 >
-> If you use Linear or Jira instead, document workspace/site, team/project, and ticket prefix here, and adapt CLAUDE.md §Issues to that tracker's states.
+> If you use Linear or Jira instead, document workspace/site, team/project, and ticket prefix here, and adapt the GitHub Issues paragraph in CLAUDE.md § "Soft context" to that tracker's states.
 
 ## 4. User Personas & Permissions
 
