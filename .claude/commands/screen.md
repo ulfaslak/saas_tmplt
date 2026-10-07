@@ -86,13 +86,13 @@ Produce a single markdown report with:
 
 Ask the human:
 
-- Create GitHub issues? If yes, file one per ripe finding (`gh issue create`). Follow the project's issue conventions in `CLAUDE.md` — describe the scope, include implementation notes flagged as advisory (these are refactor issues; notes are part of the scope), cross-reference related issues in the batch.
+- Create GitHub issues? If yes, file one per ripe finding (`gh issue create`). Describe the scope, include implementation notes flagged as advisory (these are refactor issues; notes are part of the scope), cross-reference related issues in the batch.
 - DNA updates? If any finding codifies a rule that's already de facto true (e.g. "always go through the org-resolving helper"), propose the one-line DNA addition and apply it on approval. Do **not** pre-bake aspirational rules that describe the post-refactor state — those belong in the ticket's acceptance criteria, not DNA.
 - Anything to add to [[DEFERRED]]? A noted-but-not-ripe item sometimes deserves a trigger-based entry if the cost of re-discovering it later is high.
 
 ## Ticket writing from findings
 
-Refactor tickets look different from feature tickets. They're almost entirely implementation detail, and that's fine — flag implementation notes as **advisory**, per `CLAUDE.md`'s ticket-content rule. Things to include:
+Refactor tickets look different from feature tickets. They're almost entirely implementation detail, and that's fine — flag implementation notes as **advisory** ("Implementation note: …") so the implementing agent verifies them rather than following them blindly. Things to include:
 
 - A **Summary** that states the structural problem, not just the symptom.
 - **Scope** — what's being touched, listed concretely (files, line numbers).

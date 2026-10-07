@@ -23,17 +23,17 @@ Run a project-wide search for each of the following tokens and replace with your
 |---|---|---|
 | `<APP_NAME>` | terraform vars, scripts, docker, CLAUDE.md, AGENTS/SCHEDULED_JOBS.md | Lowercase project name (e.g. `acme`). Used for resource names. |
 | `<DOMAIN>` | nginx/nginx.conf, CLAUDE.md | Production domain (e.g. `app.acme.com`) |
-| `<HOST_IP>` | CLAUDE.md | VPS IP from Terraform output (fill in once provisioned) |
+| `<HOST_IP>` | CLAUDE.md, AGENTS/DNA/DEVELOPMENT.md | VPS IP from Terraform output (fill in once provisioned) |
 | `<DEPLOY_USER>` | CLAUDE.md, scripts | Usually `deploy` |
 | `<SSH_KEY_PATH>` | CLAUDE.md, scripts | Local path to the SSH key used for VPS access (e.g. `~/.ssh/<APP_NAME>_deploy`) |
 | `<APP_DIR>` | CLAUDE.md, scripts | Path on the VPS where the repo lives, usually `~/<APP_NAME>` |
-| `<DB_USER>` / `<DB_NAME>` | CLAUDE.md | Postgres user/db (set in `.env.production`) |
+| `<DB_USER>` / `<DB_NAME>` | AGENTS/DNA/DEVELOPMENT.md | Postgres user/db (set in `.env.production`) |
 | `<GITHUB_OWNER>/<REPO>` | docker-compose.prod.yml | GitHub repo path, used for GHCR image |
 | `<ACME_EMAIL>` | nginx/nginx.conf | Email Let's Encrypt should contact about cert issues |
 
 There are also `> ⚠️ **Template placeholder.**` admonitions in:
 
-- `CLAUDE.md` — `# About`, `# Knowledge base`, `## About the human`, `### Production operations`
+- `CLAUDE.md` — `# About`, `# Knowledge base`, `## About the humans`, `## Production operations`
 - `AGENTS/DNA/PRODUCT.md` — every section
 - `AGENTS/DNA/DESIGN.md` — every section
 - `AGENTS/DNA/UI_SPEC.md` — Badge conventions
@@ -48,9 +48,9 @@ Read each, fill in the project-specific values, then delete the admonition.
 
 ### Step 2 — Confirm the issue tracker
 
-The workflow defaults to **GitHub Issues** on this repo — no wiring needed: `gh` is the interface, and CLAUDE.md §Issues documents the state model (open/closed + claim comment + linked PR). Confirm `gh auth status` works and note the repo path in `AGENTS/DNA/PRODUCT.md` §3.
+The workflow defaults to **GitHub Issues** on this repo — no wiring needed: `gh` is the interface, and CLAUDE.md § "Soft context" documents the claim-comment convention. Confirm `gh auth status` works and note the repo path in `AGENTS/DNA/PRODUCT.md` §3.
 
-If you prefer Linear or Jira instead: adapt CLAUDE.md §Issues to your tracker's states, enable the relevant plugin in `.claude/settings.json` (`enabledPlugins`), and authenticate its MCP.
+If you prefer Linear or Jira instead: adapt the GitHub Issues paragraph in CLAUDE.md § "Soft context" to your tracker's states, enable the relevant plugin in `.claude/settings.json` (`enabledPlugins`), and authenticate its MCP.
 
 ### Step 3 — Stack confirmation
 
