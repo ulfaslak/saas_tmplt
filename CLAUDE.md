@@ -224,63 +224,10 @@ Then read only the sections you need.
 - **Don't re-read a file you just edited to check the edit landed.** Edit fails loudly if the match missed.
 - **Pipe test output through `tail`/`grep`.** A full vitest run is hundreds of lines; the summary is four, and the failure detail is a targeted grep away.
 
-# Collaborating with the humans
+# Working with the humans
 
-## About the humans
+How to collaborate with each human (signals such as 🤘, how to write the final message) lives in that person's own user-level instructions, not in this repository. What is specific to this project:
 
-> ⚠️ **Template placeholder.** Replace this with a one-to-three-line profile per human you collaborate with: experience level, language/framework comfort, technical strengths and gaps, how they want trade-offs explained.
->
-> Example: *"Experienced with SvelteKit, TypeScript, and web platform fundamentals. Not a backend or devops specialist. When a decision involves infrastructure or database internals, explain trade-offs concretely in plain language. Strong opinions about code quality and project hygiene. Thinks in systems."*
+> ⚠️ **Template placeholder.** Replace this with a one-line profile per teammate whose needs differ from the developer's (e.g. a non-developer designer), and any project-specific signals.
 
-## Signals from the human
-
-- **The 🤘 signal.** When the human ends a request with 🤘, they're explicitly granting wider latitude and want you to finish the job. Lean harder into your own judgment, decide more, ask less. Merging PRs is allowed. You must of course still follow the workflow rules and stop in case you are genuinely blocked or about to do something very stupid.
-
-- When the human asks for a **mock / mockup** they want a standalone HTML preview of a design *before* it's built. See the full workflow + fidelity checklist in `AGENTS/SPECS/README.md`.
-
-- The human may use speech-to-text. Such messages have characteristic near misses (e.g. "CLAUDE.md" transcribed as "Cloud MD"). When you see things like that, expect other *near misses* and adjust your understanding accordingly. If something is genuinely uninterpretable, ask.
-
-## Writing for the human
-
-The last message of your turn should be optimized for the human's understanding. Software engineering jargon is strongly discouraged. Ideally you write ~80% ASD-STE100 compliant. End substantial work with a response that follows this format:
-
-```
-<Description of where the work landed. Details from the process are only included if they are relevant to the outcome. Keep this section short.>
-
-⚠️ HEADS UP
-
-<ALL CAPS PIECE OF INFORMATION THAT THE HUMAN MUST ABSOLUTELY TAKE NOTE OF>
-<...>
-
-Recap
-
-<Same short recap as generated with /recap>
-
-Next steps
-
-- <...>
-- <...>
-
-<status label: Merged/Not merged/Deployed/Live> · <timestamp: HH:MM:SS (24-hour format)>
-```
-
-Guidelines that apply when explaining your work:
-
-- **Lead with the outcome.**
-- **Explain decisions, tradeoffs, risks and blockers**
-- **Make the final response self-contained.**
-- **Let response depth follow stakes, not effort.**
-- **Signal your confidence clearly.** Never conflate what is verified, inferred, and assumed. "Tests pass" is not "this works in prod"; a green deploy is not a rendered page. Never claim success without fresh evidence you actually looked at.
-- **Link what you name.** Embed markdown links into anything you name that can carry a link (GitHub issue or PR, mock, HTML document, source, etc.), so the human doesn't have to manually go and find things.
-
-### Status updates during long work
-
-The test-fix-learn cycle routinely runs for an hour with dozens of tool calls. Long silent stretches make a session unreadable, so post a brief update IN ALL CAPS at each **meaningful state change** — a phase boundary, a bug found, an approach abandoned, a blocker hit - insofar as it is worth for the human to know if they scroll through the transcript. Keep it at one-sentence ALL CAPS, with optional short lower-case explanation below.
-
-## Highly valued agent behavior
-
-- **Do it, don't suggest it.** If you can execute a task (run a migration, apply SQL, restart a service, run a command), do it yourself. Never tell the human to run something you have access to run. This applies everywhere — production, local dev. Unless it's a potentially breaking operation that can't be undone, go ahead and do it.
-- **Don't offer to do work the human already asked for.**
-- **Match the requested mode.** _Explain, review, diagnose, "what do you think about", "why does X happen"_ are **read-only** — answer them, don't start editing files or opening worktrees. _Change, build, fix, add, ship_ carry implementation **and** the verification that goes with it (the full test-fix-learn cycle, not just the edit). When the mode is genuinely ambiguous, answer first and offer the implementation in one line.
-- **Report blockers with evidence.** Exhaust the safe in-scope alternatives before declaring yourself blocked. When you are actually blocked, state three things: the exact condition, the evidence for it, and the specific action needed to continue. "Couldn't get X working" is not a blocker report.
-- **Never trigger a skill just because its name appears in the human's text.** Skills have ordinary names — `stage`, `reset`, `ship`, `run`, `review`, `issue`. "Reset the staging DB" or "let's review the schema" are English sentences, not skill invocations. Aside from direct invocation, only run a skill when the human directly asks you to.
+- When the human asks for a **mock / mockup**, they want a standalone HTML preview of a design *before* it's built. See the workflow and fidelity checklist in `AGENTS/SPECS/README.md`.
