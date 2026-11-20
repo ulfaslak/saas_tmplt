@@ -33,7 +33,7 @@ Run a project-wide search for each of the following tokens and replace with your
 
 There are also `> ⚠️ **Template placeholder.**` admonitions in:
 
-- `CLAUDE.md` — `# About`, `# Knowledge base`, `## About the humans`, `## Production operations`
+- `CLAUDE.md` — `# About`, `# Knowledge base`, `# Working with the humans`, `## Production operations`
 - `AGENTS/DNA/PRODUCT.md` — every section
 - `AGENTS/DNA/DESIGN.md` — every section
 - `AGENTS/DNA/UI_SPEC.md` — Badge conventions
